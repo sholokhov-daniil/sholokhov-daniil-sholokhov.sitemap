@@ -6,9 +6,7 @@
 ```php
 use Sholokhov\Sitemap\Configuration;
 use Sholokhov\Sitemap\Pipeline\Pipeline;
-use Sholokhov\Sitemap\Source\IO\IOEntry;
 use Sholokhov\Sitemap\Source\IO\IOSource;
-use Sholokhov\Sitemap\Source\IO\EntryType;
 use Sholokhov\Sitemap\Generator\SitemapGenerator;
 
 // Получаем конфигурацию генератора карты сайта на основе ID сайта.
@@ -24,27 +22,15 @@ $generator->addPipeline(
         ->addSource(
             // Указываем в качестве источника данных файловую систему
             new IOSource(
-                siteId: 's1', 
-                items: [
-                    // Указываем какой путь мы включаем в генерацию карты сайта (идет рекурсивно)
-                    new IOEntry(
-                        // Путь до добавляемой директории или файла
-                        path: '/', 
-                        // Тип элемента каталога до которого указали путь
-                        type: EntryType::Directory
-                        // Добавлять или исключать путь из источника
-                        active: true,
-                    ),
-                    // Указываем какой путь мы включаем в генерацию карты сайта (идет рекурсивно)
-                    new IOEntry(
-                        // Путь до добавляемой директории или файла
-                        path: '/404.php', 
-                        // Тип элемента каталога до которого указали путь
-                        type: EntryType::File
-                        // Добавлять или исключать путь из источника
-                        active: false,
-                    ),
-                ]
+                siteId: 's1',
+                // Указываем какой путь должен индексироваться
+                includes: [
+                    '/',
+                ],
+                // Указываем какой путь мы исключаем
+                excludes: [
+                    '/about/'
+                ],
             )
         )
 );

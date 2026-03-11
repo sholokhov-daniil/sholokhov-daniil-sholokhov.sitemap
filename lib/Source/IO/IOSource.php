@@ -20,9 +20,16 @@ class IOSource implements SourceInterface
     /**
      * Элементы файловой системы принимающие участие в формировании доступных ссылок
      *
-     * @var IOEntry[]
+     * @var string[]
      */
-    protected readonly array $items;
+    protected array $includes;
+
+    /**
+     * Элементы файловой системы исключенные из формирования доступных ссылок
+     *
+     * @var string[]
+     */
+    protected array $excludes;
 
     /**
      * Корневая директория сайта анализа файловой структуры
@@ -47,13 +54,19 @@ class IOSource implements SourceInterface
 
     /**
      * @param string $siteId ID сайта принимающий участие в анализе
-     * @param IOEntry[] $items Элементы файловой системы принимающие участие в анализе доступных ссылок
+     * @param array $includes
+     * @param array $excludes
      */
-    public function __construct(string $siteId, array $items = [])
+    public function __construct(string $siteId, array $includes = [], array $excludes = [])
     {
         $this->siteId = $siteId;
-        $this->documentRoot = (string)SiteTable::getDocumentRoot($this->siteId);
-        $this->items = $items;
+        $this->documentRoot = (string)SiteTable::getDocumentRoot($this->siteId) . DIRECTORY_SEPARATOR;
+
+        $this->includes = $includes;
+        $this->excludes = array_map(
+            $this->normalizePath(...),
+            $excludes
+        );
     }
 
     /**
@@ -66,11 +79,11 @@ class IOSource implements SourceInterface
      */
     public function fetch(): ?Entry
     {
-        if (empty($this->items)) {
+        if (empty($this->includes)) {
             return null;
         }
 
-        if ($this->stream === null) {
+        if (is_null($this->stream)) {
             $this->stream = $this->iterateSources();
         }
 
@@ -93,21 +106,19 @@ class IOSource implements SourceInterface
      */
     protected function iterateSources(): Generator
     {
-        foreach ($this->items as $entity) {
-            if (!$entity->active) {
+        foreach ($this->includes as $path) {
+            if ($this->isExcluded($path)) {
                 continue;
             }
 
-            switch ($entity->type) {
-                case EntryType::File:
-                    yield $this->mapFileToEntry(
-                        new File($entity->path, $this->siteId)
-                    );
-                    break;
-                case EntryType::Directory:
-                    yield from $this->walkDirectory($entity->path);
-                    break;
+            if (is_dir($path)) {
+                yield from $this->walkDirectory($path);
+                continue;
             }
+
+            yield $this->mapFileToEntry(
+                new File($path, $this->siteId)
+            );
         }
     }
 
@@ -125,9 +136,15 @@ class IOSource implements SourceInterface
         $list = CSeoUtils::getDirStructure(true, $this->siteId, $directoryPath);
 
         foreach ($list as $item) {
-            if ($item['TYPE'] === EntryType::File->value) {
+            $path = $item['DATA']['PATH'];
+
+            if ($this->isExcluded($path)) {
+                continue;
+            }
+
+            if ($item['TYPE'] === 'F') {
                 yield $this->mapFileToEntry(
-                    new File($item['DATA']['PATH'], $this->siteId)
+                    new File($path, $this->siteId)
                 );
                 continue;
             }
@@ -139,6 +156,32 @@ class IOSource implements SourceInterface
 
             yield from $this->walkDirectory($nextDir);
         }
+    }
+
+    /**
+     * Проверяет исключения
+     *
+     * @param string $path
+     *
+     * @return bool
+     * @throws InvalidPathException
+     * @author Daniil S.
+     */
+    protected function isExcluded(string $path): bool
+    {
+        $path = $this->normalizePath($path);
+
+        foreach ($this->excludes as $exclude) {
+            if ($path === $exclude) {
+                return true;
+            }
+
+            if (str_starts_with($path, $exclude)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -182,5 +225,20 @@ class IOSource implements SourceInterface
             : $path;
 
         return '/' . ltrim($path, '/');
+    }
+
+    /**
+     * Нормализация пути до элемента каталога
+     *
+     * @param string $path
+     *
+     * @return string
+     * @author Daniil S.
+     */
+    protected function normalizePath(string $path): string
+    {
+        return str_starts_with($path, $this->documentRoot)
+            ? $path
+            : $this->documentRoot . ltrim($path, DIRECTORY_SEPARATOR);
     }
 }
