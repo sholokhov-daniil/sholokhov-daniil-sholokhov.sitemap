@@ -5,10 +5,19 @@ namespace Sholokhov\Sitemap\Pipeline;
 use CBXPunycode;
 
 use Sholokhov\Sitemap\Configuration;
+
 use Bitrix\Seo\Sitemap\File\Runtime;
 
-abstract class AbstractFilePipeline implements PipelineInterface
+class Pipeline implements PipelineInterface
 {
+    /**
+     * Наименование файла в который производится запись ссылок
+     *
+     * @var string
+     * @author Daniil S.
+     */
+    protected string $filename;
+
     /**
      * Максимальное количество записей в одном файле карты сайта
      * 
@@ -38,15 +47,18 @@ abstract class AbstractFilePipeline implements PipelineInterface
     protected array $sources = [];
 
     /**
-     * Возвращает название файла в который производится запись
-     * 
-     * @return string
+     * @param string $filename Наименование файла в который производится сохранение ссылок
      */
-    abstract public function getFileName(): string;
+    public function __construct(string $filename)
+    {
+        $this->filename = $filename;
+    }
 
     /**
      * Выполнить генерацию
-     * 
+     *
+     * @param Configuration $config
+     *
      * @return Runtime
      */
     public function run(Configuration $config): Runtime
@@ -66,6 +78,16 @@ abstract class AbstractFilePipeline implements PipelineInterface
         }
 
         return $runtime;
+    }
+
+    /**
+     * Возвращает название файла в который производится запись
+     *
+     * @return string
+     */
+    public function getFileName(): string
+    {
+        return $this->filename;
     }
 
     /**
@@ -107,7 +129,9 @@ abstract class AbstractFilePipeline implements PipelineInterface
     /**
      * Модифицировать адрес
      *
-     * @param Entry $entry
+     * @param object $entry
+     * @param Configuration $config
+     *
      * @return void
      */
     protected function modify(object $entry, Configuration $config): void
@@ -155,6 +179,6 @@ abstract class AbstractFilePipeline implements PipelineInterface
      */
     protected function isSplitNeeded(): bool
     {
-        return $this->maxEntries > 0&& $this->entriesCount >= $this->maxEntries;
+        return $this->maxEntries > 0 && $this->entriesCount >= $this->maxEntries;
     }
 }

@@ -63,6 +63,20 @@ class SitemapGenerator
     }
 
     /**
+     * Добавление процесса генерации
+     *
+     * @param PipelineInterface $pipeline
+     *
+     * @return $this
+     * @author Daniil S.
+     */
+    public function addPipeline(PipelineInterface $pipeline): static
+    {
+        $this->pipelines[] = $pipeline;
+        return $this;
+    }
+
+    /**
      * Устанавливает название идексного файла карты сайта
      * 
      * @param string $name
