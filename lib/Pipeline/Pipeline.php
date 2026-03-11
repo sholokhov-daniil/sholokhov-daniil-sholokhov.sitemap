@@ -2,11 +2,13 @@
 
 namespace Sholokhov\Sitemap\Pipeline;
 
+use Bitrix\Main\Diag\Debug;
 use CBXPunycode;
 
 use Sholokhov\Sitemap\Configuration;
 
 use Bitrix\Seo\Sitemap\File\Runtime;
+use Sholokhov\Sitemap\Source\SourceInterface;
 
 class Pipeline implements PipelineInterface
 {
@@ -42,7 +44,7 @@ class Pipeline implements PipelineInterface
     /**
      * Источники данных
      * 
-     * @var object[]
+     * @var SourceInterface[]
      */
     protected array $sources = [];
 
@@ -67,13 +69,15 @@ class Pipeline implements PipelineInterface
 
         foreach($this->sources as $source) {
             while($entry = $source->fetch()) {
-                if ($this->validator && !$this->validator->validate($entry)) {
-                    continue;
-                }
+                Debug::dump($entry);
 
-                $this->modify($entry, $config);
+//                if ($this->validator && !$this->validator->validate($entry)) {
+//                    continue;
+//                }
 
-                $this->addEntry($entry, $runtime);
+//                $this->modify($entry, $config);
+//
+//                $this->addEntry($entry, $runtime);
             }
         }
 
@@ -105,10 +109,10 @@ class Pipeline implements PipelineInterface
     /**
      * Добавление источника данных
      * 
-     * @param object
+     * @param SourceInterface
      * @return static
      */
-    public function addSource(object $source): static
+    public function addSource(SourceInterface $source): static
     {
         $this->sources[] = $source;
         return $this;
