@@ -2,16 +2,17 @@
 
 namespace Sholokhov\Sitemap\Pipeline;
 
-use Bitrix\Main\Diag\Debug;
 use CBXPunycode;
 
 use Sholokhov\Sitemap\Configuration;
 
+use Bitrix\Main\Diag\Debug;
 use Bitrix\Seo\Sitemap\File\Runtime;
-use Sholokhov\Sitemap\Source\SourceInterface;
 
 class Pipeline implements PipelineInterface
 {
+    use UseSourceTrait, UseValidatorTrait, UseSplittingTrait;
+
     /**
      * Наименование файла в который производится запись ссылок
      *
@@ -19,34 +20,6 @@ class Pipeline implements PipelineInterface
      * @author Daniil S.
      */
     protected string $filename;
-
-    /**
-     * Максимальное количество записей в одном файле карты сайта
-     * 
-     * @var int
-     */
-    protected int $maxEntries = 0;
-
-    /**
-     * Количество добавленных ссылок в файл карты сайта 
-     *
-     * @var int
-     */
-    protected int $entriesCount = 0;
-
-    /**
-     * Валидатор добавляемых ссылок
-     * 
-     * @var ?object
-     */
-    protected ?object $validator = null;
-
-    /**
-     * Источники данных
-     * 
-     * @var SourceInterface[]
-     */
-    protected array $sources = [];
 
     /**
      * @param string $filename Наименование файла в который производится сохранение ссылок
@@ -71,13 +44,12 @@ class Pipeline implements PipelineInterface
             while($entry = $source->fetch()) {
                 Debug::dump($entry);
 
-//                if ($this->validator && !$this->validator->validate($entry)) {
-//                    continue;
-//                }
+                if ($this->isEntryValidation($entry)) {
+                    continue;
+                }
 
-//                $this->modify($entry, $config);
-//
-//                $this->addEntry($entry, $runtime);
+                $this->modify($entry, $config);
+                $this->addEntry($entry, $runtime);
             }
         }
 
@@ -92,42 +64,6 @@ class Pipeline implements PipelineInterface
     public function getFileName(): string
     {
         return $this->filename;
-    }
-
-    /**
-     * Добавление валидатора сохраняемой ссылки
-     * 
-     * @param object $validator
-     * @return $this
-     */
-    public function setValidator(object $validator): static
-    {
-        $this->validator = $validator;
-        return $this;
-    }
-
-    /**
-     * Добавление источника данных
-     * 
-     * @param SourceInterface
-     * @return static
-     */
-    public function addSource(SourceInterface $source): static
-    {
-        $this->sources[] = $source;
-        return $this;
-    }
-
-    /**
-     * Установка максимального количества записей в одном файле
-     * 
-     * @param int $count
-     * @return static
-     */
-    public function setMaxEntries(int $count): static
-    {
-        $this->maxEntries = $count;
-        return $this;
     }
 
     /**
@@ -162,8 +98,7 @@ class Pipeline implements PipelineInterface
         // TODO: Добавить проверку на дублирование
 
         if ($this->isSplitNeeded()) {
-            $runtime->split();
-            $this->entriesCount = 0;
+            $this->split($runtime);
         }
 
         $data = [
@@ -174,15 +109,5 @@ class Pipeline implements PipelineInterface
         $runtime->addEntry($data);
         // TODO: Добавить запись в хранилище, что ссылка уже добавлена
         $this->entriesCount++;
-    }
-
-    /**
-     * Определение необходимости разделения файла карты сайта.
-     *
-     * @return bool
-     */
-    protected function isSplitNeeded(): bool
-    {
-        return $this->maxEntries > 0 && $this->entriesCount >= $this->maxEntries;
     }
 }
