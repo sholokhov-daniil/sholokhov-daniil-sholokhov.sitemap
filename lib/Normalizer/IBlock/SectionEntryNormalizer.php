@@ -1,6 +1,6 @@
 <?php
 
-namespace  Sholokhov\Sitemap\Normalizer;
+namespace Sholokhov\Sitemap\Normalizer\IBlock;
 
 use CIBlock;
 use DateTime;
@@ -20,6 +20,7 @@ class SectionEntryNormalizer
      * Выполнить нормализацию
      *
      * @param array $section
+     *
      * @return Entry
      */
     public function normalize(array $section): Entry

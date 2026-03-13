@@ -2,22 +2,40 @@
 
 namespace Sholokhov\Sitemap\Source\IBlock;
 
-use Bitrix\Iblock\SectionTable;
-use Bitrix\Main\ArgumentException;
-use Bitrix\Main\Loader;
-use Bitrix\Main\ObjectPropertyException;
-use Bitrix\Main\ORM\Query\Result;
-use Bitrix\Main\SystemException;
 use Sholokhov\Sitemap\Entry;
 use Sholokhov\Sitemap\Exception\SitemapException;
 use Sholokhov\Sitemap\Rules\IBlock\IBlockPolicy;
 use Sholokhov\Sitemap\Settings\IBlock\IBlockItem;
 use Sholokhov\Sitemap\Source\SourceInterface;
-use Sholokhov\Sitemap\Normalizer\SectionEntryNormalizer;
+use Sholokhov\Sitemap\Normalizer\IBlock\SectionEntryNormalizer;
 
+use Bitrix\Main\Loader;
+use Bitrix\Iblock\SectionTable;
+use Bitrix\Main\LoaderException;
+use Bitrix\Main\SystemException;
+use Bitrix\Main\ORM\Query\Result;
+use Bitrix\Main\ArgumentException;
+use Bitrix\Main\ObjectPropertyException;
+
+/**
+ * Источник данных по разделам.
+ *
+ * Производит поиск активных разделов согласно настройкам карты сайта.
+ */
 class SectionSource implements SourceInterface
 {
+    /**
+     * Левая граница узла дерева разделов
+     *
+     * @var int|null
+     */
     protected ?int $leftMargin = null;
+
+    /**
+     * Правая граница узла дерева разделов
+     *
+     * @var int|null
+     */
     protected ?int $rightMargin = null;
 
     /**
@@ -32,7 +50,7 @@ class SectionSource implements SourceInterface
      *
      * @var int
      */
-    protected int $limit = 3;
+    protected int $limit = 15;
 
     /**
      * ID раздела источника данных
@@ -55,13 +73,38 @@ class SectionSource implements SourceInterface
      */
     protected readonly IBlockPolicy $policy;
 
+    /**
+     * Нормализатор ссылки на раздел
+     *
+     * @var SectionEntryNormalizer
+     */
     protected SectionEntryNormalizer $normalizer;
 
+    /**
+     * Найденные разделы
+     *
+     * @var Result|null
+     */
     protected ?Result $sectionIterator = null;
 
-    protected ?object $elementSource = null;
+    /**
+     * Хранилище элементов инфоблока
+     *
+     * @var ElementSource|null
+     */
+    protected ?ElementSource $elementSource = null;
 
-    public function __construct(int $sectionId, IBlockItem $settings)
+    /**
+     * @param int $sectionId ID индексируемого раздела. Если указать 0, то индексируются все разделы
+     * @param IBlockItem $settings Настройки индексации инфоблока
+     *
+     * @throws ArgumentException
+     * @throws ObjectPropertyException
+     * @throws SitemapException
+     * @throws SystemException
+     * @throws LoaderException
+     */
+    public function __construct(IBlockItem $settings, int $sectionId = 0)
     {
         $this->sectionId = $sectionId;
         $this->settings = $settings;
@@ -79,6 +122,15 @@ class SectionSource implements SourceInterface
         $this->normalizer = new SectionEntryNormalizer('s1');
     }
 
+    /**
+     * Возвращает ссылку на элемент сущности
+     *
+     * @return Entry|null
+     * @throws ArgumentException
+     * @throws ObjectPropertyException
+     * @throws SitemapException
+     * @throws SystemException
+     */
     public function fetch(): ?Entry
     {
         while (true) {
@@ -114,8 +166,40 @@ class SectionSource implements SourceInterface
                 continue;
             }
 
+            // 5. Раздел разрешён → сначала сам раздел
+            $this->elementSource = new ElementSource(
+                (int)$section['ID'],
+                $this->settings,
+            );
+
             return $this->normalizer->normalize($section);
         }
+    }
+
+    /**
+     * Указание количество обрабатываемых раздела в один шаг
+     *
+     * @param int $limit
+     *
+     * @return $this
+     */
+    public function setLimit(int $limit): static
+    {
+        $this->limit = $limit;
+        return $this;
+    }
+
+    /**
+     * Установка стартовой точки
+     *
+     * @param int $offset
+     *
+     * @return $this
+     */
+    public function setOffset(int $offset): static
+    {
+        $this->offset = $offset;
+        return $this;
     }
 
     /**
@@ -170,6 +254,15 @@ class SectionSource implements SourceInterface
         ]);
     }
 
+    /**
+     * Определение границ разделов
+     *
+     * @return void
+     * @throws ArgumentException
+     * @throws ObjectPropertyException
+     * @throws SitemapException
+     * @throws SystemException
+     */
     protected function loadMargins(): void
     {
         $section = SectionTable::getByPrimary($this->sectionId, [
