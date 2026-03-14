@@ -2,6 +2,7 @@
 
 namespace Sholokhov\Sitemap\Generator;
 
+use Bitrix\Main\Diag\Debug;
 use Sholokhov\Sitemap\Configuration;
 use Sholokhov\Sitemap\Pipeline\PipelineInterface;
 
@@ -43,7 +44,6 @@ class SitemapGenerator
      */
     public function run(): void
     {
-        $files = [];
         $index = new Index($this->indexFileName, $this->config->toArray());
 
         $files = array_map(

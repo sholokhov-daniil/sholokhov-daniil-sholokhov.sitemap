@@ -2,6 +2,7 @@
 
 namespace Sholokhov\Sitemap\Pipeline;
 
+use Bitrix\Main\Diag\Debug;
 use Sholokhov\Sitemap\Entry;
 use Sholokhov\Sitemap\Validator\ValidatorInterface;
 

@@ -2,11 +2,11 @@
 
 namespace Sholokhov\Sitemap\Pipeline;
 
+use Bitrix\Main\Diag\Debug;
 use CBXPunycode;
 
 use Sholokhov\Sitemap\Configuration;
 
-use Bitrix\Main\Diag\Debug;
 use Bitrix\Seo\Sitemap\File\Runtime;
 
 class Pipeline implements PipelineInterface
@@ -42,9 +42,7 @@ class Pipeline implements PipelineInterface
 
         foreach($this->sources as $source) {
             while($entry = $source->fetch()) {
-                Debug::dump($entry);
-
-                if ($this->isEntryValidation($entry)) {
+                if (!$this->isEntryValidation($entry)) {
                     continue;
                 }
 
