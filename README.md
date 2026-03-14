@@ -111,11 +111,25 @@ $validator = new HttpValidator();
 $validator->validate($entry);
 ```
 
+Сам класс `HttpValidator` не производит валидацию HTTP запроса, для этого он делегирует других http валидаторам, которые необходимо добавить.
+
 #### Статус ответа
 Проверяет статус ответа от `200` до `299`. Если статус ответа входит в данный интервал, то ссылка пропускается.
 
+```php
+use Sholokhov\Sitemap\Validator\Http\StatusValidator;
+
+$validator->addFeature(new StatusValidator);
+```
+
 #### Canonical
 Если на странице отсутствует canonical или не соответствует проверяемой страницы, то ссылка не проходит валидацию.
+
+```php
+use Sholokhov\Sitemap\Validator\Http\CanonicalValidator;
+
+$validator->addFeature(new CanonicalValidator);
+```
 
 ## Генератор карты сайта
 

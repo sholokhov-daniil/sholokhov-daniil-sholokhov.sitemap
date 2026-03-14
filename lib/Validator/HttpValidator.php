@@ -3,21 +3,16 @@
 namespace Sholokhov\Sitemap\Validator;
 
 use Sholokhov\Sitemap\Entry;
-use Sholokhov\Sitemap\Helpers\ContentHelper;
 
 use Bitrix\Main\Web\Uri;
 use Bitrix\Main\Web\HttpClient;
 use Bitrix\Main\Web\Http\Request;
 
-use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Client\ClientExceptionInterface;
+use Sholokhov\Sitemap\Validator\Http\HttpValidatorInterface;
 
 /**
- * Производится проверка посредством Http запроса.
- *
- * Производится проверка следующих моментов:
- * - Статуса ответа
- * - Наличие каноничной ссылки
+ * Производится проверка посредством HTTP запроса.
  */
 class HttpValidator implements ValidatorInterface
 {
@@ -25,6 +20,11 @@ class HttpValidator implements ValidatorInterface
      * @var HttpClient
      */
     protected HttpClient $client;
+
+    /**
+     * @var HttpValidatorInterface[]
+     */
+    protected array $features = [];
 
     public function __construct()
     {
@@ -40,81 +40,38 @@ class HttpValidator implements ValidatorInterface
      */
     public function validate(Entry $entry): bool
     {
+        if (empty($this->features)) {
+            return true;
+        }
+
         try {
             $uri = new Uri($entry->url);
             $request = new Request('GET', $uri);
             $response = $this->client->sendRequest($request);
 
-            if (!$this->statusValidate($response)) {
-                return false;
+            foreach ($this->features as $feature) {
+                if (!$feature->validate($response, $request)) {
+                    return false;
+                }
             }
 
-            $headerContent = $this->readHeadStreamed($response);
-
-            // TODO: Добавить возможность отключать валидацию canonical
-            return $this->canonicalValidate($headerContent, $entry);
+            return true;
         } catch (ClientExceptionInterface) {
             return false;
         }
     }
 
     /**
-     * Проверка статуса ответа.
+     * Добавление расширения проверки
      *
-     * Разрешаются статусы ответа с кодом 2xx
+     * @param HttpValidatorInterface $feature
      *
-     * @param ResponseInterface $response
-     * @return bool
+     * @return $this
      */
-    protected function statusValidate(ResponseInterface $response): bool
+    public function addFeature(HttpValidatorInterface $feature): static
     {
-        $status = $response->getStatusCode();
-        return $status >= 200 && $status < 300;
-    }
-
-    /**
-     * Проверка каноничной ссылки.
-     *
-     * @param string $content
-     * @param Entry $entry
-     * @return bool
-     */
-    protected function canonicalValidate(string $content, Entry $entry): bool
-    {
-        $canonical = ContentHelper::getCanonical($content);
-
-        if ($canonical === '') {
-            return true;
-        }
-
-        return $canonical === $entry->url;
-    }
-
-    /**
-     * Читаем содержимое страницы до конца header
-     *
-     * @param ResponseInterface $response
-     * @param int $chunkSize
-     * @return string
-     */
-    protected function readHeadStreamed(ResponseInterface $response, int $chunkSize = 4096): string
-    {
-        $bodyStream = $response->getBody();
-        $bodyStream->rewind();
-
-        $headContent = '';
-        while (!$bodyStream->eof()) {
-            $chunk = $bodyStream->read($chunkSize);
-            $headContent .= $chunk;
-
-            if (stripos($headContent, '</head>') !== false) {
-                // нашли конец head → обрезаем лишнее
-                $headContent = substr($headContent, 0, stripos($headContent, '</head>') + 7);
-                break;
-            }
-        }
-
-        return $headContent;
+        $this->features[] = $feature;
+        return $this;
     }
 
     /**
