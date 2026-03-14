@@ -75,6 +75,50 @@ $source = new ElementSource(
 );
 ```
 
+## Валидаторы ссылок
+
+### robots.txt
+
+Валидатор проверяет отсутствия блокировки ссылки в файле robots.txt. Ссылка считается заблокированной при наличии подходящего `Disallow`. На основе ID сайта определяется путь до корня, и парсится файл.
+
+```php
+use Sholokhov\Sitemap\Validator\RobotsValidator;
+
+$validator = new RobotsValidator(siteId: 's1');
+$validator->validate($entry);
+```
+
+### .htaccess
+
+Парсится файл .htaccess, для поиска редиректов, если для ссылки был найден редирект, то она исключается из карты сайта.
+На основе ID сайта определяется путь до корня, и парсится файл.
+
+```php
+use Sholokhov\Sitemap\Validator\HtaccessValidator;
+
+$validator = new HtaccessValidator(siteId: 's1');
+$validator->validate($entry);
+```
+
+### HTTP
+
+Производит HTTP запрос на каждую страницу, которая планируется добавиться в карту сайта. На основе ответа определяется необходимость добавлять в карту.
+
+```php
+use Sholokhov\Sitemap\Validator\HttpValidator;
+
+$validator = new HttpValidator();
+$validator->validate($entry);
+```
+
+#### Статус ответа
+Проверяет статус ответа от `200` до `299`. Если статус ответа входит в данный интервал, то ссылка пропускается.
+
+#### Canonical
+Если на странице отсутствует canonical или не соответствует проверяемой страницы, то ссылка не проходит валидацию.
+
+
+
 ## Генератор карты сайта
 
 ## Ручная конфигурация
