@@ -117,16 +117,18 @@ $validator->validate($entry);
 #### Canonical
 Если на странице отсутствует canonical или не соответствует проверяемой страницы, то ссылка не проходит валидацию.
 
-
-
 ## Генератор карты сайта
 
-## Ручная конфигурация
+Запуск генерации производится в ручном режиме и требует корректно сконфигурировать.  
+При разработке модуля соблюдалась концепция обратной совместимости, для возможности расширять стандартные возможности
+
+
 ```php
 use Sholokhov\Sitemap\Configuration;
 use Sholokhov\Sitemap\Pipeline\Pipeline;
 use Sholokhov\Sitemap\Source\IO\IOSource;
 use Sholokhov\Sitemap\Generator\SitemapGenerator;
+use Sholokhov\Sitemap\Validator\HtaccessValidator;
 
 // Получаем конфигурацию генератора карты сайта на основе ID сайта.
 $config = Configuration::createFromSiteId(siteId: 's1');
@@ -151,6 +153,11 @@ $generator->addPipeline(
                     '/about/'
                 ],
             )
+        )
+        // Валидация ссылки
+        ->addValidator(
+            // Проверка редиректа в htaccess
+            new HtaccessValidator(siteId: 's1')
         )
 );
 

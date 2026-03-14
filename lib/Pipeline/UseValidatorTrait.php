@@ -10,9 +10,9 @@ trait UseValidatorTrait
     /**
      * Валидатор добавляемых ссылок
      *
-     * @var ?object
+     * @var ValidatorInterface[]
      */
-    protected ?object $validator = null;
+    protected array $validators = [];
 
     /**
      * Добавление валидатора сохраняемой ссылки
@@ -20,9 +20,9 @@ trait UseValidatorTrait
      * @param ValidatorInterface $validator
      * @return $this
      */
-    public function setValidator(ValidatorInterface $validator): static
+    public function addValidator(ValidatorInterface $validator): static
     {
-        $this->validator = $validator;
+        $this->validators[] = $validator;
         return $this;
     }
 
@@ -35,6 +35,12 @@ trait UseValidatorTrait
      */
     protected function isEntryValidation(Entry $entry): bool
     {
-        return !$this->validator || $this->validator->validate($entry);
+        foreach ($this->validators as $validator) {
+            if (!$validator->validate($entry)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
