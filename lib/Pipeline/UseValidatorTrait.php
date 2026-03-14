@@ -3,6 +3,7 @@
 namespace Sholokhov\Sitemap\Pipeline;
 
 use Sholokhov\Sitemap\Entry;
+use Sholokhov\Sitemap\Validator\ValidatorInterface;
 
 trait UseValidatorTrait
 {
@@ -16,10 +17,10 @@ trait UseValidatorTrait
     /**
      * Добавление валидатора сохраняемой ссылки
      *
-     * @param object $validator
+     * @param ValidatorInterface $validator
      * @return $this
      */
-    public function setValidator(object $validator): static
+    public function setValidator(ValidatorInterface $validator): static
     {
         $this->validator = $validator;
         return $this;
