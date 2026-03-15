@@ -3,8 +3,9 @@
 namespace Sholokhov\Sitemap\Repository;
 
 use Exception;
+use BackedEnum;
+
 use Sholokhov\Sitemap\ORM\RuntimeTable;
-use Sholokhov\Sitemap\Exception\SitemapStorageException;
 
 use Bitrix\Main\SystemException;
 use Bitrix\Main\ArgumentException;
@@ -22,11 +23,11 @@ readonly class CacheRuntimeStorage
 {
     /**
      * @param string $pid ID ресурса
-     * @param string|null $type Тип ресурса
+     * @param BackedEnum|null $type Тип ресурса$
      */
     public function __construct(
         private string $pid,
-        private ?string $type = null
+        private ?BackedEnum $type = null
     )
     {
     }
@@ -35,17 +36,15 @@ readonly class CacheRuntimeStorage
      * Добавление новой записи
      *
      * @param string $id
-     * @param string $status
+     * @param bool $status
      * @param array $parameters
      *
      * @return bool
      * @throws ArgumentException
      * @throws ObjectPropertyException
-     * @throws SitemapStorageException
      * @throws SystemException
-     * @throws Exception
      */
-    public function add(string $id, string $status, array $parameters = []): bool
+    public function add(string $id, bool $status, array $parameters = []): bool
     {
         $defaultParameters = [
             RuntimeTable::PC_PID => $this->getPid(),
@@ -54,14 +53,13 @@ readonly class CacheRuntimeStorage
         ];
 
         if (null !== $this->type) {
-            $defaultParameters[RuntimeTable::PC_TYPE] = $this->type;
+            $defaultParameters[RuntimeTable::PC_TYPE] = $this->type->value;
         }
 
         $parameters = array_merge($parameters, $defaultParameters);
 
         if ($this->exist($id)) {
-            $error = sprintf('An entry with ID "%s" already exists', $id);
-            throw new SitemapStorageException($error);
+            return $this->update($id, $parameters);
         }
 
         return RuntimeTable::add($parameters)->isSuccess();
@@ -97,7 +95,7 @@ readonly class CacheRuntimeStorage
         $parameters['filter'][RuntimeTable::PC_PID] = $this->pid;
 
         if (null !== $this->type) {
-            $parameters['filter'][RuntimeTable::PC_TYPE] = $this->type;
+            $parameters['filter'][RuntimeTable::PC_TYPE] = $this->type->value;
         }
 
         return RuntimeTable::getRow($parameters) ?: [];
@@ -219,9 +217,9 @@ readonly class CacheRuntimeStorage
     /**
      * Возвращает тип ресурса.
      *
-     * @return string|null
+     * @return BackedEnum|null
      */
-    public function getType(): ?string
+    public function getType(): ?BackedEnum
     {
         return $this->type;
     }

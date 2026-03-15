@@ -4,6 +4,10 @@ namespace Sholokhov\Sitemap\Source\IBlock;
 
 use Sholokhov\Sitemap\Entry;
 use Sholokhov\Sitemap\Exception\SitemapException;
+use Sholokhov\Sitemap\Exception\SitemapStorageException;
+use Sholokhov\Sitemap\ORM\RuntimeTable;
+use Sholokhov\Sitemap\Repository\CacheRuntimeStorage;
+use Sholokhov\Sitemap\Repository\CacheTypeEnum;
 use Sholokhov\Sitemap\Rules\IBlock\IBlockPolicy;
 use Sholokhov\Sitemap\Settings\IBlock\IBlockItem;
 use Sholokhov\Sitemap\Source\SourceInterface;
@@ -94,6 +98,8 @@ class SectionSource implements SourceInterface
      */
     protected ?ElementSource $elementSource = null;
 
+    protected CacheRuntimeStorage $storage;
+
     /**
      * @param int $sectionId ID индексируемого раздела. Если указать 0, то индексируются все разделы
      * @param IBlockItem $settings Настройки индексации инфоблока
@@ -109,6 +115,8 @@ class SectionSource implements SourceInterface
         $this->sectionId = $sectionId;
         $this->settings = $settings;
         $this->policy = new IBlockPolicy($this->settings);
+
+        $this->storage = $this->createCache();
 
         if (!Loader::includeModule('iblock')) {
             throw new SitemapException('IBLOCK module is not installed.');
@@ -166,6 +174,8 @@ class SectionSource implements SourceInterface
                 continue;
             }
 
+            $this->storage->add($section['ID'], true);
+
             // 5. Раздел разрешён → сначала сам раздел
             $this->elementSource = new ElementSource(
                 (int)$section['ID'],
@@ -206,11 +216,28 @@ class SectionSource implements SourceInterface
      * Проверка запрета добавления раздела в карту сайта
      *
      * @param array $section
+     *
      * @return bool
+     * @throws ArgumentException
+     * @throws ObjectPropertyException
+     * @throws SystemException
+     * @throws SitemapStorageException
      */
     protected function isDeny(array $section): bool
     {
-        return $this->policy->isDenySection($section['LEFT_MARGIN'], $section['RIGHT_MARGIN']);
+        if ($this->policy->isDenySection($section['LEFT_MARGIN'], $section['RIGHT_MARGIN'])) {
+            $this->storage->add($section['ID'], false);
+            return true;
+        }
+
+        $parentId = (int)$section['IBLOCK_SECTION_ID'] ?: (int)$section['ID'];
+
+        if ($this->storage->isIgnore($parentId)) {
+            $this->storage->add($section['ID'], false);
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -275,5 +302,16 @@ class SectionSource implements SourceInterface
 
         $this->leftMargin = (int)$section['LEFT_MARGIN'];
         $this->rightMargin = (int)$section['RIGHT_MARGIN'];
+    }
+
+    /**
+     * Инициализация кеша
+     *
+     * @return CacheRuntimeStorage
+     */
+    protected function createCache(): CacheRuntimeStorage
+    {
+        $pid = crc32($this->sectionId . $this->settings->id);
+        return new CacheRuntimeStorage($pid, CacheTypeEnum::IBlockSection);
     }
 }
