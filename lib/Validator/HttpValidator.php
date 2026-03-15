@@ -40,6 +40,8 @@ class HttpValidator implements ValidatorInterface
      */
     public function validate(Entry $entry): bool
     {
+        // TODO: Добавить кеширование валидации
+
         if (empty($this->features)) {
             return true;
         }

@@ -2,7 +2,6 @@
 
 namespace Sholokhov\Sitemap\Pipeline;
 
-use Bitrix\Main\Diag\Debug;
 use CBXPunycode;
 
 use Sholokhov\Sitemap\Configuration;

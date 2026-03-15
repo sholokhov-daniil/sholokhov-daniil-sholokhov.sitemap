@@ -54,6 +54,8 @@ class sholokhov_sitemap extends CModule
         $this->Add();
 
         self::IncludeModule($this->MODULE_ID);
+
+        \Sholokhov\Sitemap\ORM\RuntimeTable::getEntity()->createDbTable();
     }
 
     public function UnInstallDB(): void
